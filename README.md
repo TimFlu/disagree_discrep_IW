@@ -56,3 +56,22 @@ If you use our method or this repository, please cite:
     year    = {2024}
 }
 ```
+
+
+## Experimental IW hybrids
+
+Two separate plug-in estimators are available on this branch:
+`iw_overlap_critic` and `iw_residual_dis2`. They share domain-based selection and
+importance weighting, and return DIS2-style pandas result files with additional
+regional diagnostics. The original DIS2 pipeline is unchanged.
+
+See [the method definitions, usage, and limitations](docs/iw_hybrids.md).
+
+```bash
+python -m src.eval.iw_hybrid --feats_dir FEATURE_DIRECTORY --results_dir RESULTS_DIRECTORY
+python -m pytest tests/test_iw_hybrid.py -q
+```
+
+The hybrids are empirical estimates, not yet complete high-probability bounds.
+Use `src.plot.compare_iw_hybrids` to compare saved outputs without recomputing
+the historical DIS2 formula.
