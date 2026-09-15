@@ -1,0 +1,10 @@
+Starting ODD + IW overlap job at Tue Sep 15 08:55:13 PM CEST 2026
+Host: gnode24
+Project root: /storage/homefs/tf24s166/odd_untouched/odd
+Features dir: /storage/homefs/tf24s166/code/disagree_discrep/data/features
+Results dir: /storage/homefs/tf24s166/odd_untouched/odd/results
+Conda env: performance_metrics
+CUDA_VISIBLE_DEVICES: 0
+Extra arguments: 
+/storage/homefs/tf24s166/.conda/envs/performance_metrics/bin/python: No module named src.eval.iw_hybrid
+srun: error: gnode24: task 0: Exited with exit code 1
