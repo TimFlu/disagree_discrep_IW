@@ -21,26 +21,10 @@ eval "$(conda shell.bash hook)"
 conda activate "${CONDA_ENV:-performance_metrics}"
 
 # --- Paths ---
-PROJECT_ROOT="/storage/homefs/tf24s166/odd_untouched/odd"
-FEATS_DIR="/storage/homefs/tf24s166/code/disagree_discrep/data/features"
-RESULTS_DIR="/storage/homefs/tf24s166/odd_untouched/odd/results"
+PROJECT_ROOT="/storage/homefs/tf24s166/IW_dis2/disagree_discrep_IW"
+FEATS_DIR="/storage/homefs/tf24s166/IW_dis2/disagree_discrep_IW/data/features"
+RESULTS_DIR="/storage/homefs/tf24s166/IW_dis2/disagree_discrep_IW/results"
 
-# --- ODD / IW configuration ---
-EPOCHS="${EPOCHS:-50}"
-CRITIC_REPEATS="${CRITIC_REPEATS:-30}"
-VAL_FRAC="${VAL_FRAC:-0.5}"
-LOSS_TYPE="${LOSS_TYPE:-disagreement}"
-DETECTOR_ITERS="${DETECTOR_ITERS:-300}"
-DETECTOR_LAYERS="${DETECTOR_LAYERS:-3}"
-DETECTOR_WIDTH_FACTOR="${DETECTOR_WIDTH_FACTOR:-1}"
-SOURCE_CLAMP="${SOURCE_CLAMP:--1}"
-TARGET_CLAMP="${TARGET_CLAMP:--1}"
-TARGET_LOSS_THRESHOLD="${TARGET_LOSS_THRESHOLD:--1}"
-SOURCE_LOSS_THRESHOLD="${SOURCE_LOSS_THRESHOLD:--1}"
-WEIGHTING="${WEIGHTING:-prob}"
-BEST_CRITIC_STRATEGY="${BEST_CRITIC_STRATEGY:-odd}"
-IW_EPS="${IW_EPS:-1e-6}"
-IW_CLIP="${IW_CLIP:-10.0}"
 
 # Slurm usually exposes the allocated GPU as cuda:0 inside the job.
 GPU_ID="${GPU_ID:-0}"
@@ -60,8 +44,9 @@ echo "CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-unset}"
 echo "Extra arguments: $*"
 
 srun python -m src.eval.iw_hybrid \
-  --feats_dir FEATURE_DIRECTORY \
-  --results_dir results/iw_hybrids \
+  --feats_dir "$FEATS_DIR" \
+  --results_dir "$RESULTS_DIR" \
   --include_dis2_reference
 
 echo "Job finished at $(date)"
+
