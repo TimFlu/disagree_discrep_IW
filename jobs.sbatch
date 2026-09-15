@@ -23,7 +23,7 @@ conda activate "${CONDA_ENV:-performance_metrics}"
 # --- Paths ---
 PROJECT_ROOT="/storage/homefs/tf24s166/IW_dis2/disagree_discrep_IW"
 FEATS_DIR="/storage/homefs/tf24s166/IW_dis2/disagree_discrep_IW/data/features"
-RESULTS_DIR="/storage/homefs/tf24s166/IW_dis2/disagree_discrep_IW/results"
+RESULTS_DIR="/storage/homefs/tf24s166/IW_dis2/disagree_discrep_IW/results/iw_hybrids"
 
 
 # Slurm usually exposes the allocated GPU as cuda:0 inside the job.

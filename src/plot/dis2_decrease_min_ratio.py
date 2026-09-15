@@ -4,9 +4,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import argparse
 import os
+import shutil
 
 sns.set_style("whitegrid")
-plt.rcParams['text.usetex'] = True  # Let TeX do the typsetting
+plt.rcParams['text.usetex'] = shutil.which('latex') is not None
 plt.rcParams['font.family'] = 'serif'  # ... for regular text
 plt.rcParams['font.sans-serif'] = ['Times']  # Choose a nice font here
 

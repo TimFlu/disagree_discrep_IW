@@ -204,6 +204,30 @@ training methods are shown. No LaTeX installation is needed. Historical rows
 are identified automatically; compare corrected DIS2 and plug-in hybrids
 with their distinct statistical meanings in mind.
 
+To recreate the basic paper-style comparisons for both IW methods, run:
+
+```bash
+python -m src.plot.iw_basic_figures \
+  --results results/iw_hybrid_f475b82dfdbf.pkl results/dis2_50epochs_30repeats_valfrac0.50.pkl \
+  --plot_dir results/iw_basic_figures
+```
+
+This writes PNG/PDF overlays, separate method panels, threshold comparisons,
+and CSV summaries, separately for non-DA and DANN/CDANN models. Each method has
+a distinct marker. W=1 is filled; larger thresholds use larger hollow markers.
+All saved observations are retained without selecting the best repeat or W.
+Only rows with status `ok` and finite prediction/target accuracy enter metrics;
+excluded rows are counted in the summaries. Coverage is the empirical fraction
+of saved estimates at or below target accuracy, including for plug-in methods.
+Historical and reference rows can use different splits and experiment coverage;
+these are descriptive comparisons, not paired tests.
+
+Use `--methods dis2_historical dis2_reference iw_overlap_critic --iw_thresholds 1`
+for the three-method W=1 comparison. `--bound_strategy` defaults to `logits`.
+PCA, minimum-ratio, and alternative-loss ablations require corresponding saved
+experiments/diagnostics; the current logits-only IW run cannot recreate them.
+The historical delta correction is not applied to the IW plug-in estimates.
+
 ```bash
 python -m pytest tests/test_iw_hybrid.py -q
 ```

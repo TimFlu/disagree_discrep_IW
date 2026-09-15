@@ -1,5 +1,7 @@
 """Plot saved estimates directly; never reconstruct a DIS2 formula."""
 import argparse
+import inspect
+import pickle
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -8,10 +10,47 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
+class _CompatStringArray(pd.arrays.StringArray):
+    def __setstate__(self, state):
+        # Recent pandas omits the empty attribute dict in this pickle state.
+        if len(state) == 2:
+            state = (*state, {})
+        super().__setstate__(state)
+
+
+def _compat_string_dtype(storage='python', na_value=pd.NA):
+    # Older pandas uses pd.NA for all string dtypes.
+    return pd.StringDtype(storage=storage)
+
+
+class _NumpyCompatUnpickler(pickle.Unpickler):
+    """Read newer NumPy/pandas result arrays with the older plotting stack."""
+
+    def find_class(self, module, name):
+        if module == 'numpy._core' or module.startswith('numpy._core.'):
+            module = 'numpy.core' + module[len('numpy._core'):]
+        if 'na_value' not in inspect.signature(pd.StringDtype).parameters:
+            if module in ('pandas', 'pandas.core.arrays.string_') and name == 'StringDtype':
+                return _compat_string_dtype
+            if module in ('pandas.arrays', 'pandas.core.arrays.string_') and name == 'StringArray':
+                return _CompatStringArray
+        return super().find_class(module, name)
+
+
+def _read_results_pickle(path):
+    try:
+        return pd.read_pickle(path)
+    except ModuleNotFoundError as exc:
+        if exc.name != 'numpy._core' and not (exc.name or '').startswith('numpy._core.'):
+            raise
+        with open(path, 'rb') as handle:
+            return _NumpyCompatUnpickler(handle).load()
+
+
 def load_results(paths):
     frames = []
     for path in paths:
-        frame = pd.read_pickle(path).copy()
+        frame = _read_results_pickle(path).copy()
         if 'prediction_method' not in frame:
             frame['prediction_method'] = 'dis2_historical'
         if 'iw_threshold' not in frame:
