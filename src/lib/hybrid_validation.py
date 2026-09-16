@@ -9,15 +9,25 @@ METHODS = ('iw_overlap_critic', 'iw_residual_dis2')
 SPLITS = ('domain_train', 'domain_cal', 'critic_train', 'critic_select', 'eval')
 
 
-def split_indices(n, seed, fractions=(.2, .1, .3, .15)):
-    if len(fractions) != 4 or min(fractions) <= 0 or sum(fractions) >= 1:
-        raise ValueError('Four positive fitting fractions must sum to less than one.')
+def split_indices(n, seed, fractions=(.4, .1, .2)):
+    """Disjoint domain-fit/calibration, selection and evaluation blocks.
+
+    Critic training reuses the union of domain fitting and calibration.
+    Fractions refer to total domain size, not fractions within training.
+    """
+    if (len(fractions) != 3 or not np.isfinite(fractions).all()
+            or min(fractions) <= 0 or sum(fractions) >= 1):
+        raise ValueError('Three positive finite fractions (domain train, domain calibration, '
+                         'critic selection) must sum to less than one.')
     sizes = [int(n * f) for f in fractions]
     sizes.append(n - sum(sizes))
     if min(sizes) < 2:
         raise ValueError('Each split needs at least two samples; increase data or adjust fractions.')
     indices = np.random.default_rng(seed).permutation(n)
-    return dict(zip(SPLITS, np.split(indices, np.cumsum(sizes)[:-1])))
+    blocks = np.split(indices, np.cumsum(sizes)[:-1])
+    split = dict(zip(('domain_train', 'domain_cal', 'critic_select', 'eval'), blocks))
+    split['critic_train'] = np.concatenate((split['domain_train'], split['domain_cal']))
+    return {name: split[name] for name in SPLITS}
 
 
 def aggregate(method, source_errors, weights, source_a, target_a,
@@ -71,7 +81,7 @@ def predict_disagreement(critic, features, logits, batch_size):
 
 def evaluate_hybrids(source_features, source_logits, source_labels, target_features, target_logits,
                      methods=METHODS, thresholds=(1., 2., 5.), seed=0,
-                     fractions=(.2, .1, .3, .15), domain_epochs=100, epochs=50,
+                     fractions=(.4, .1, .2), domain_epochs=100, epochs=50,
                      repeats=30, batch_size=256, source_strength=1., loss_type='disagreement'):
     """Target task labels deliberately absent; caller may attach benchmark truth.
 
@@ -155,7 +165,7 @@ def evaluate_hybrids(source_features, source_logits, source_labels, target_featu
 
 
 def evaluate_dis2_reference(source_features, source_logits, source_labels, target_features, target_logits,
-                            seed=0, fractions=(.2, .1, .3, .15), epochs=50, repeats=30,
+                            seed=0, fractions=(.4, .1, .2), epochs=50, repeats=30,
                             batch_size=256, loss_type='disagreement', delta=.01):
     """Full-domain DIS2 with the same independent critic/evaluation splits.
 

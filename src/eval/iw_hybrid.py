@@ -30,8 +30,9 @@ def parser():
     p.add_argument('--batch_size', type=int, default=256)
     p.add_argument('--source_strength', type=float, default=1.)
     p.add_argument('--loss_type', choices=['disagreement', 'DBAT', 'negative_xent'], default='disagreement')
-    p.add_argument('--split_fractions', nargs=4, type=float, default=[.2, .1, .3, .15],
-                   metavar=('DOMAIN_TRAIN', 'DOMAIN_CAL', 'CRITIC_TRAIN', 'CRITIC_SELECT'))
+    p.add_argument('--split_fractions', nargs=3, type=float, default=[.4, .1, .2],
+                   metavar=('DOMAIN_TRAIN', 'DOMAIN_CAL', 'CRITIC_SELECT'),
+                   help='Fractions of total data; critic training reuses domain train + calibration; remainder evaluates.')
     p.add_argument('--include_dis2_reference', action='store_true')
     p.add_argument('--delta', type=float, default=.01, help='Only used by the optional DIS2 reference.')
     p.add_argument('--device', choices=['auto', 'cpu', 'cuda'], default='auto')
@@ -59,7 +60,8 @@ def main(argv=None):
     device = torch.device('cuda' if args.device == 'auto' and torch.cuda.is_available()
                           else 'cpu' if args.device == 'auto' else args.device)
     config = vars(args).copy()
-    config['schema_version'] = 2
+    config['schema_version'] = 3
+    config['split_protocol'] = 'shared_training'
     run_id = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()[:12]
     destination = Path(args.results_dir)
     destination.mkdir(parents=True, exist_ok=True)

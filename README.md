@@ -291,13 +291,15 @@ Source and target are independently shuffled per seed (source uses `seed`, targe
 
 | Split | Default fraction | Purpose |
 |---|---:|---|
-| `domain_train` | 0.20 | Standardization, optional SVD, discriminator fitting |
+| `domain_train` | 0.40 | Standardization, optional SVD, discriminator fitting |
 | `domain_cal` | 0.10 | Discriminator temperature fitting |
-| `critic_train` | 0.30 | Critic optimization |
-| `critic_select` | 0.15 | Select critic epoch and repeat |
-| `eval` | Remaining ≈0.25 | Final risk/disagreement estimates and target region mass |
+| `critic_train` | 0.50 | Critic optimization; union of domain training and calibration |
+| `critic_select` | 0.20 | Select critic epoch and repeat |
+| `eval` | Remaining ≈0.30 | Final risk/disagreement estimates and target region mass |
 
-The first four sizes are rounded down; evaluation receives the remainder. Every full split needs at least two samples. Selected regional subsets can still be empty. Splits are sample-level random splits, not class-stratified or patient/group-aware; grouped medical datasets need an adapted splitting protocol before use.
+Domain training, domain calibration, and critic selection sizes are rounded down; evaluation receives the remainder. Critic training reuses the union of domain training and calibration; it does not consume another block of samples. Every full split needs at least two samples. Selected regional subsets can still be empty. Splits are sample-level random splits, not class-stratified or patient/group-aware; grouped medical datasets need an adapted splitting protocol before use.
+
+Domain fitting and calibration remain disjoint. Critic training deliberately reuses their samples, so some training weights/regions are in-sample and can reflect discriminator overfitting. Critic selection and final evaluation remain independent of domain fitting and calibration. Final evaluation is excluded from all fitting and selection, including SVD. This reuse does not establish a confidence bound or resolve estimated-weight error. The optional DIS2 reference uses the same enlarged critic splits. Saved NPZ files retain all five role names, with intentional overlap only between critic training and its two domain subsets.
 
 ## Running experiments
 
@@ -337,7 +339,7 @@ Omit dataset, shift, and training-method filters to iterate over combinations co
 | `--batch_size` | `256` | Gradient-accumulation/evaluation chunk size |
 | `--source_strength` | `1` | Source-A penalty for overlap critic only |
 | `--loss_type` | `disagreement` | Also `DBAT` or `negative_xent` |
-| `--split_fractions` | `.2 .1 .3 .15` | First four split fractions; remainder is evaluation |
+| `--split_fractions` | `.4 .1 .2` | Domain training, calibration, selection fractions; critic training reuses the first two; remainder is evaluation |
 | `--include_dis2_reference` | Off | DIS² with matching splits and new training loop |
 | `--delta` | `.01` | Confidence parameter for DIS² reference only |
 | `--device` | `auto` | `auto`, `cpu`, or `cuda` |
@@ -399,7 +401,7 @@ Rows identify `dataset`, `shift`, `train_method`, `bound_strategy`, `prediction_
 | `target_residual_mass` | Fraction of target evaluation samples in B |
 | `residual_error_contribution` | Entire residual contribution, including target mass |
 | `residual_source_error`, `residual_source_disagreement`, `residual_discrepancy` | Full-source error, full-source disagreement, and target-B minus full-source disagreement; legacy field names retained |
-| `residual_source_region`, `schema_version` | `full` for residual DIS²; version 2 distinguishes the updated formula from old runs |
+| `residual_source_region`, `schema_version` | `full` for residual DIS²; version 3 identifies shared training; version 2 introduced the full-source formula |
 | `residual_target_disagreement` | Conditional target-B disagreement, when evaluated |
 | `n_source_a/b`, `n_target_a/b` | Final-evaluation regional counts |
 | `iw_effective_n` | Selected-source weight ESS: $(\sum w)^2/\sum w^2$ |
@@ -504,7 +506,7 @@ A complete high-probability analysis must control the IW contribution and weight
 python -m pytest tests/test_iw_hybrid.py -q
 ```
 
-The suite covers oracle IW mass correction (10% source versus 60% target error), denominators, residual target mass, both formulas and their same-critic difference, empty-region handling, raw out-of-range results, prior correction, reproducible disjoint splits, selected parameter snapshots, unequal-size batching, domain fitting, end-to-end files/plots, and invariance of predictions when target task labels change.
+The suite covers oracle IW mass correction (10% source versus 60% target error), denominators, residual target mass, both formulas and their same-critic difference, empty-region handling, raw out-of-range results, prior correction, reproducible nested splits and independent evaluation, selected parameter snapshots, unequal-size batching, domain fitting, end-to-end files/plots, and invariance of predictions when target task labels change.
 
 These are implementation and synthetic integration checks. They do not establish real-data performance, conditional invariance, density-ratio accuracy, or coverage at a claimed confidence level.
 

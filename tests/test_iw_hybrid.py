@@ -81,10 +81,22 @@ def test_density_ratio_prior_correction_and_threshold():
         iw_contribution([1, 0], [1], [True, False])
 
 
-def test_splits_are_disjoint_reproducible_and_complete():
-    split = split_indices(201, 7)
-    assert len(np.unique(np.concatenate(list(split.values())))) == 201
-    assert np.array_equal(split['eval'], split_indices(201, 7)['eval'])
+def test_nested_splits_are_reproducible_and_evaluation_is_independent():
+    for n, fractions in ((201, (.4, .1, .2)), (300, (.3, .2, .1))):
+        split = split_indices(n, 7, fractions)
+        atomic = [split[k] for k in ('domain_train', 'domain_cal', 'critic_select', 'eval')]
+        assert len(np.concatenate(atomic)) == len(np.unique(np.concatenate(atomic))) == n
+        np.testing.assert_array_equal(split['critic_train'], np.concatenate(atomic[:2]))
+        for key, values in split.items():
+            np.testing.assert_array_equal(values, split_indices(n, 7, fractions)[key])
+        assert not set(split['critic_train']) & set(split['critic_select'])
+        assert not set(split['critic_train']) & set(split['eval'])
+    split = split_indices(200, 0)
+    assert {k: len(v) for k, v in split.items()} == dict(
+        domain_train=80, domain_cal=20, critic_train=100, critic_select=40, eval=60)
+    for fractions in ((.2, .1, .3, .15), (.4, float('nan'), .2), (.4, .1, .5), (.4, 0, .2)):
+        with pytest.raises(ValueError):
+            split_indices(200, 0, fractions)
     with pytest.raises(ValueError):
         split_indices(10, 0)
 
@@ -175,7 +187,7 @@ def test_cli_files_plot_and_target_label_isolation(tmp_path):
     first = main(shared + ['--results_dir', str(tmp_path / 'run1')])
     a = pd.read_pickle(first)
     assert len(a) == 5 and (a.status == 'ok').all()
-    assert (a.schema_version == 2).all()
+    assert (a.schema_version == 3).all()
     assert (a.loc[a.prediction_method == METHODS[1], 'residual_source_region'] == 'full').all()
     assert first.with_suffix('.csv').exists()
     assert len(list(first.parent.glob('splits_*.npz'))) == 1

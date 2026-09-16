@@ -81,21 +81,23 @@ Neither method is guaranteed to be tighter than the other.
 
 ## Splits, batching, and representations
 
-For each seed, source and target are independently shuffled into disjoint splits:
+For each seed, source and target are independently shuffled into three main disjoint sets: training (50%), selection (20%), and evaluation (30%). Domain fitting and calibration partition training; critic training reuses all of it:
 
 | Split | Default fraction | Use |
 | --- | ---: | --- |
-| Domain training | 0.20 | Standardization and discriminator fitting |
+| Domain training | 0.40 | Standardization and discriminator fitting |
 | Domain calibration | 0.10 | Temperature fitting |
-| Critic training | 0.30 | Critic optimization |
-| Critic selection | 0.15 | Repeat/epoch selection |
-| Final evaluation | Remainder, about 0.25 | IW, residual errors/disagreements, region mass |
+| Critic training | 0.50 | Critic optimization; union of domain training and calibration |
+| Critic selection | 0.20 | Repeat/epoch selection |
+| Final evaluation | Remainder, about 0.30 | IW, residual errors/disagreements, region mass |
 
-Integer rounding is applied to the first four sizes; evaluation receives the
+Integer rounding is applied to domain fitting, calibration, and selection sizes; evaluation receives the
 remainder. Each split needs at least two samples. Exact split indices are saved
-as NPZ files. `--split_fractions` changes the first four fractions. No threshold
+as NPZ files. `--split_fractions .4 .1 .2` sets those three fractions of the total dataset. The old four-value form is rejected to avoid silently changing its meaning. No threshold
 is selected automatically: every requested threshold is retained as its own row.
 Do not select a threshold using benchmark target labels.
+
+Domain fitting and calibration remain disjoint. Critic training deliberately reuses their samples, so some training weights/regions are in-sample and can reflect discriminator overfitting. Critic selection and final evaluation remain independent of domain fitting and calibration. Final evaluation is excluded from all fitting and selection, including SVD. This reuse does not establish a confidence bound or resolve estimated-weight error. The optional DIS2 reference uses the same enlarged critic splits. Saved NPZ files retain all five role names, with intentional overlap only between critic training and its two domain subsets.
 
 By default the representation is `logits`. `features` and `PCA<N>` are supported;
 PCA<N> uses an uncentered SVD projection with approximately input_dim/N columns,
@@ -183,8 +185,10 @@ score, selected critic epoch/repeat/score, and numerical saturation count.
 The legacy `residual_source_error` and `residual_source_disagreement` fields now
 contain full-source evaluation means. `residual_discrepancy` is
 `d_target_B - d_source`. Rows carry `residual_source_region=full` for this method.
-Schema version 2 is saved in configuration and result rows and changes the run
-identifier, keeping these outputs separate from version-1 source-B results.
+Schema version 3 is saved in configuration and result rows and changes the run
+identifier, keeping shared-training outputs separate from version-2 five-split
+full-source results and version-1 source-B results. Configuration also records
+`split_protocol: shared_training`.
 Existing saved results are not recomputed; rerun experiments for the new formula.
 
 If target A has samples but source A has none, IW is marked unsupported.
