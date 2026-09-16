@@ -1,5 +1,14 @@
 # DIS² with importance-weighted regional estimators
 
+## Source restriction branch
+
+This branch adds **`source_pruning`** (restrict source by discriminator target probability, then apply DIS²) and **`source_weighted_critic`** (weight source agreement while finding the critic, then apply the ordinary unweighted DIS² expression). Target samples remain unrestricted. Both variants include the DIS² statistical correction, conditional on the relevant critic assumption.
+
+Use `python -m src.eval.source_restriction` and `python -m src.plot.source_restriction`. A matching full-source reference, simpler 40% fit / 10% internal validation / 50% final evaluation split, score/mask/checkpoint exports, and a separate `jobs_source_restriction.sbatch` are included.
+
+**[Source-restriction method definitions, run commands, plots, and limitations](docs/source_restriction.md)**
+
+
 This research fork extends the original [DIS² implementation](https://arxiv.org/abs/2306.00312) by Elan Rosenfeld and Saurabh Garg with two experimental methods for estimating a frozen classifier's error under distribution shift:
 
 - **`iw_overlap_critic`**: estimate error in a selected region using importance weighting (IW), then use an overlap-constrained critic's disagreement on the remaining target samples.
@@ -555,4 +564,5 @@ Please cite the original work when using its method or code:
     url       = {https://arxiv.org/abs/2306.00312}
 }
 ```
+
 

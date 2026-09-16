@@ -169,18 +169,18 @@ def record(group, plot_name, representation, label, n_available=None):
     return points, summary
 
 
-def accuracy_figure(data, baselines, args, output, stem, title):
+def accuracy_figure(data, baselines, args, output, stem, title, label_suffix=' (plug-in)'):
     hybrid = data[data.bound_strategy == args.bound_strategy]
     if hybrid.empty:
         raise ValueError(f'No {args.bound_strategy} hybrid results for {title}.')
     groups = matched_comparison(hybrid, baselines, args.baseline_methods)
     fig, ax = plt.subplots(figsize=(8, 4.5))
-    scatter(ax, groups[0], title + ' (plug-in)', marker='*', s=55, color='#0072B2', zorder=3)
+    scatter(ax, groups[0], title + label_suffix, marker='*', s=55, color='#0072B2', zorder=3)
     colors = ['#D55E00', '#009E73', '#CC79A7', '#E69F00', '#56B4E9']
     points, summaries = [], []
     for index, group in enumerate(groups):
         method = group.prediction_method.iloc[0]
-        label = title + ' (plug-in)' if index == 0 else BASELINES[method]
+        label = title + label_suffix if index == 0 else BASELINES[method]
         if index:
             scatter(ax, group, label, s=19, alpha=.5, color=colors[index-1])
         n_available = len(hybrid) if index == 0 else len(baselines[baselines.prediction_method == method])
@@ -194,7 +194,7 @@ def accuracy_figure(data, baselines, args, output, stem, title):
     return points, summaries
 
 
-def representation_figure(data, strategies, output, stem, title, plot_name, columns):
+def representation_figure(data, strategies, output, stem, title, plot_name, columns, label_suffix=' (plug-in)'):
     rows = math.ceil(len(strategies) / columns)
     fig, axes = plt.subplots(rows, columns, figsize=(4.2 * columns, 4.1 * rows), squeeze=False)
     groups = [data[data.bound_strategy == strategy] for strategy in strategies]
@@ -202,19 +202,19 @@ def representation_figure(data, strategies, output, stem, title, plot_name, colu
     for ax, strategy, group in zip(axes.flat, strategies, groups):
         draw_axes(ax, groups)
         ax.set_title(label_representation(strategy), fontsize=11)
-        p, summary = record(group, plot_name, strategy, title + ' (plug-in)')
+        p, summary = record(group, plot_name, strategy, title + label_suffix)
         points.append(p)
         summaries.append(summary)
         if group.empty:
             ax.text(.5, .5, 'Not run: ' + strategy, ha='center', va='center', transform=ax.transAxes)
         else:
-            count = scatter(ax, group, title + ' (plug-in)', s=22, color='#0072B2', alpha=.7)
+            count = scatter(ax, group, title + label_suffix, s=22, color='#0072B2', alpha=.7)
             ax.text(.03, .97, f'n={count}/{len(group)}; MAE={summary["mae"]:.3f}\n'
                     f'coverage={summary["empirical_coverage"]:.1%}',
                     va='top', fontsize=9, transform=ax.transAxes)
     for ax in list(axes.flat)[len(strategies):]:
         ax.set_visible(False)
-    fig.suptitle(title + ' (plug-in)', fontsize=13)
+    fig.suptitle(title + label_suffix, fontsize=13)
     save_figure(fig, output, stem + '_' + plot_name)
     return points, summaries
 
@@ -302,3 +302,4 @@ def main(argv=None):
 
 if __name__ == '__main__':
     main()
+
