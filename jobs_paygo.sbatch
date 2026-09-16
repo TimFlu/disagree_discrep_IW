@@ -44,8 +44,11 @@ echo "CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-unset}"
 echo "Extra arguments: $*"
 
 srun python -m src.eval.iw_hybrid \
-  --feats_dir "$FEATS_DIR" \
-  --results_dir "$RESULTS_DIR" \
+  --feats_dir data/features \
+  --results_dir results/iw_all_representations \
+  --methods iw_overlap_critic iw_residual_dis2 \
+  --bound_strategies logits features PCA1 PCA4 PCA16 PCA32 PCA64 PCA128 \
+  --iw_thresholds 1 2 5 --seeds 0 \
   --include_dis2_reference
 
 echo "Job finished at $(date)"
