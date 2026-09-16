@@ -359,6 +359,12 @@ python -m src.eval.dis2 \
 
 The historical CLI iterates over configured datasets, training methods, and representations. It does not accept the new runner's dataset, seed, or threshold filters. The example output filename is `dis2_50epochs_30repeats_valfrac0.50.pkl`.
 
+## Reproduce the paper figures with either hybrid
+
+Use `src.plot.iw_paper_figures` for **our method versus ATC/COT/AC**, **logits versus full features**, and **all six PCA settings**. It replaces DIS² in the comparison figure with the selected hybrid and reads saved predictions without reconstructing a DIS² formula. Each method, IW threshold, seed, and DA/non-DA group gets its own figures.
+
+See [the complete run and plotting instructions](docs/iw_paper_figures.md). The updated `jobs.sbatch` runs `logits features PCA1 PCA4 PCA16 PCA32 PCA64 PCA128` and forwards additional command-line arguments. Existing logits-only files cannot supply the missing representation results.
+
 ## Results and evaluation
 
 ### Output files and reproducibility
@@ -549,3 +555,4 @@ Please cite the original work when using its method or code:
     url       = {https://arxiv.org/abs/2306.00312}
 }
 ```
+

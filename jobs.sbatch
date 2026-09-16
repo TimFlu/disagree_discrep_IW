@@ -34,6 +34,8 @@ cd "$PROJECT_ROOT"
 export PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}"
 export PYTHONDONTWRITEBYTECODE=1
 
+# Run all representations needed by src.plot.iw_paper_figures.
+# This is more expensive than logits-only; CLI arguments below can override defaults.
 echo "Starting ODD + IW overlap job at $(date)"
 echo "Host: $(hostname)"
 echo "Project root: $PROJECT_ROOT"
@@ -46,7 +48,10 @@ echo "Extra arguments: $*"
 srun python -m src.eval.iw_hybrid \
   --feats_dir "$FEATS_DIR" \
   --results_dir "$RESULTS_DIR" \
-  --include_dis2_reference
+  --bound_strategies logits features PCA1 PCA4 PCA16 PCA32 PCA64 PCA128 \
+  --include_dis2_reference \
+  "$@"
 
 echo "Job finished at $(date)"
+
 
