@@ -1,0 +1,13 @@
+plot,panel,series,n_available,n_matched,n_plotted,n_unsupported_or_nonfinite,mae,empirical_coverage,mean_violation_magnitude,hybrid_method,iw_threshold,seed,DA,prediction_column
+accuracy_vs_baselines,logits,IW residual DIS2 | W=5 | seed=0 (plug-in),90,90,82,8,0.18881154874495587,0.0975609756097561,0.18391938126576288,iw_residual_dis2,5.0,0,False,lower_bound
+accuracy_vs_baselines,logits,ATC (neg. entropy),90,90,90,0,0.06647069421079424,0.28888888888888886,0.05857754581504398,iw_residual_dis2,5.0,0,False,lower_bound
+accuracy_vs_baselines,logits,COT,90,90,90,0,0.06961517172555129,0.25555555555555554,0.064187209515108,iw_residual_dis2,5.0,0,False,lower_bound
+accuracy_vs_baselines,logits,AC,90,90,90,0,0.10911147031519149,0.1,0.10749399099085066,iw_residual_dis2,5.0,0,False,lower_bound
+logits_vs_features,logits,IW residual DIS2 | W=5 | seed=0 (plug-in),90,90,82,8,0.18881154874495587,0.0975609756097561,0.18391938126576288,iw_residual_dis2,5.0,0,False,lower_bound
+logits_vs_features,features,IW residual DIS2 | W=5 | seed=0 (plug-in),90,90,77,13,0.1611415343811829,0.24675324675324675,0.13056877482036944,iw_residual_dis2,5.0,0,False,lower_bound
+all_pca,PCA1,IW residual DIS2 | W=5 | seed=0 (plug-in),90,90,75,15,0.16711987612619636,0.22666666666666666,0.14482730154612133,iw_residual_dis2,5.0,0,False,lower_bound
+all_pca,PCA4,IW residual DIS2 | W=5 | seed=0 (plug-in),90,90,74,16,0.1482588906780283,0.22972972972972974,0.13279904019864394,iw_residual_dis2,5.0,0,False,lower_bound
+all_pca,PCA16,IW residual DIS2 | W=5 | seed=0 (plug-in),90,90,82,8,0.15622311017072954,0.18292682926829268,0.13571167380732227,iw_residual_dis2,5.0,0,False,lower_bound
+all_pca,PCA32,IW residual DIS2 | W=5 | seed=0 (plug-in),90,90,80,10,0.1640146702305618,0.175,0.13943242832438402,iw_residual_dis2,5.0,0,False,lower_bound
+all_pca,PCA64,IW residual DIS2 | W=5 | seed=0 (plug-in),90,90,82,8,0.16401849514949995,0.14634146341463414,0.14642772714953128,iw_residual_dis2,5.0,0,False,lower_bound
+all_pca,PCA128,IW residual DIS2 | W=5 | seed=0 (plug-in),90,90,84,6,0.17578566185740807,0.14285714285714285,0.16367670698834336,iw_residual_dis2,5.0,0,False,lower_bound

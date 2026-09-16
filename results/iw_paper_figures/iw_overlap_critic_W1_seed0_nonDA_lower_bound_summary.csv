@@ -1,0 +1,13 @@
+plot,panel,series,n_available,n_matched,n_plotted,n_unsupported_or_nonfinite,mae,empirical_coverage,mean_violation_magnitude,hybrid_method,iw_threshold,seed,DA,prediction_column
+accuracy_vs_baselines,logits,IW overlap critic | W=1 | seed=0 (plug-in),90,90,90,0,0.22812514374960913,0.8888888888888888,0.013214680486030554,iw_overlap_critic,1.0,0,False,lower_bound
+accuracy_vs_baselines,logits,ATC (neg. entropy),90,90,90,0,0.06647069421079424,0.28888888888888886,0.05857754581504398,iw_overlap_critic,1.0,0,False,lower_bound
+accuracy_vs_baselines,logits,COT,90,90,90,0,0.06961517172555129,0.25555555555555554,0.064187209515108,iw_overlap_critic,1.0,0,False,lower_bound
+accuracy_vs_baselines,logits,AC,90,90,90,0,0.10911147031519149,0.1,0.10749399099085066,iw_overlap_critic,1.0,0,False,lower_bound
+logits_vs_features,logits,IW overlap critic | W=1 | seed=0 (plug-in),90,90,90,0,0.22812514374960913,0.8888888888888888,0.013214680486030554,iw_overlap_critic,1.0,0,False,lower_bound
+logits_vs_features,features,IW overlap critic | W=1 | seed=0 (plug-in),90,90,90,0,0.2504673873568836,0.8777777777777778,0.022982021183053602,iw_overlap_critic,1.0,0,False,lower_bound
+all_pca,PCA1,IW overlap critic | W=1 | seed=0 (plug-in),90,90,90,0,0.24545558420214195,0.8888888888888888,0.011648213812001599,iw_overlap_critic,1.0,0,False,lower_bound
+all_pca,PCA4,IW overlap critic | W=1 | seed=0 (plug-in),90,90,90,0,0.23885201706458647,0.8555555555555555,0.017440906509569264,iw_overlap_critic,1.0,0,False,lower_bound
+all_pca,PCA16,IW overlap critic | W=1 | seed=0 (plug-in),90,90,90,0,0.23506778133004888,0.9111111111111111,0.015708323396310942,iw_overlap_critic,1.0,0,False,lower_bound
+all_pca,PCA32,IW overlap critic | W=1 | seed=0 (plug-in),90,90,90,0,0.2505662387332164,0.9444444444444444,0.01168425853457276,iw_overlap_critic,1.0,0,False,lower_bound
+all_pca,PCA64,IW overlap critic | W=1 | seed=0 (plug-in),90,90,89,1,0.2660717109612486,0.9325842696629213,0.005127463121793098,iw_overlap_critic,1.0,0,False,lower_bound
+all_pca,PCA128,IW overlap critic | W=1 | seed=0 (plug-in),90,90,90,0,0.27403973169353396,0.9444444444444444,0.0028832102461482673,iw_overlap_critic,1.0,0,False,lower_bound

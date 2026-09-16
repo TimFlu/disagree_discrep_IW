@@ -1,0 +1,13 @@
+plot,panel,series,n_available,n_matched,n_plotted,n_unsupported_or_nonfinite,mae,empirical_coverage,mean_violation_magnitude,hybrid_method,iw_threshold,seed,DA,prediction_column
+accuracy_vs_baselines,logits,IW overlap critic | W=1 | seed=0 (plug-in),60,60,60,0,0.18523386746278672,0.9,0.011138948477771464,iw_overlap_critic,1.0,0,True,lower_bound
+accuracy_vs_baselines,logits,ATC (neg. entropy),60,60,60,0,0.08293623973925908,0.2,0.0805417999625206,iw_overlap_critic,1.0,0,True,lower_bound
+accuracy_vs_baselines,logits,COT,60,60,60,0,0.08075333839903275,0.16666666666666666,0.07900888292739788,iw_overlap_critic,1.0,0,True,lower_bound
+accuracy_vs_baselines,logits,AC,60,60,60,0,0.10910890946785609,0.03333333333333333,0.10852832744518916,iw_overlap_critic,1.0,0,True,lower_bound
+logits_vs_features,logits,IW overlap critic | W=1 | seed=0 (plug-in),60,60,60,0,0.18523386746278672,0.9,0.011138948477771464,iw_overlap_critic,1.0,0,True,lower_bound
+logits_vs_features,features,IW overlap critic | W=1 | seed=0 (plug-in),60,60,60,0,0.15108865643421904,0.8833333333333333,0.01792793191447423,iw_overlap_critic,1.0,0,True,lower_bound
+all_pca,PCA1,IW overlap critic | W=1 | seed=0 (plug-in),60,60,60,0,0.17236994032317607,0.8666666666666667,0.018206947020592577,iw_overlap_critic,1.0,0,True,lower_bound
+all_pca,PCA4,IW overlap critic | W=1 | seed=0 (plug-in),60,60,60,0,0.15722523054439339,0.85,0.02046303704601523,iw_overlap_critic,1.0,0,True,lower_bound
+all_pca,PCA16,IW overlap critic | W=1 | seed=0 (plug-in),60,60,60,0,0.18190051402280458,0.9,0.007202400760210015,iw_overlap_critic,1.0,0,True,lower_bound
+all_pca,PCA32,IW overlap critic | W=1 | seed=0 (plug-in),60,60,60,0,0.19815192149519154,0.9,0.005378337757260951,iw_overlap_critic,1.0,0,True,lower_bound
+all_pca,PCA64,IW overlap critic | W=1 | seed=0 (plug-in),60,60,60,0,0.22113689271327747,0.9,0.007128513973634008,iw_overlap_critic,1.0,0,True,lower_bound
+all_pca,PCA128,IW overlap critic | W=1 | seed=0 (plug-in),60,60,60,0,0.2247233341708831,0.9,0.004545346391157666,iw_overlap_critic,1.0,0,True,lower_bound
