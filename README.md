@@ -3,7 +3,7 @@
 This research fork extends the original [DIS² implementation](https://arxiv.org/abs/2306.00312) by Elan Rosenfeld and Saurabh Garg with two experimental methods for estimating a frozen classifier's error under distribution shift:
 
 - **`iw_overlap_critic`**: estimate error in a selected region using importance weighting (IW), then use an overlap-constrained critic's disagreement on the remaining target samples.
-- **`iw_residual_dis2`**: use the same IW estimate, then run a separate DIS² problem on the remaining source and target samples.
+- **`iw_residual_dis2`**: use the same IW estimate, then run a separate DIS² problem on the full source and remaining target samples.
 
 Both methods use labeled source data and target features without target task labels during estimation. They do not retrain or improve the deployed classifier. The intended improvement is in **performance estimation and, eventually, bound tightness**.
 
@@ -189,9 +189,9 @@ $$
 
 Agreement with source predictions in A does not establish this residual dominance condition. Both classifiers could agree and be wrong on B. Source-ground-truth-constrained critics are not implemented.
 
-### 5. `iw_residual_dis2`: remove A and solve residual DIS²
+### 5. `iw_residual_dis2`: full-source DIS² against target B
 
-Train a fresh linear critic using **source B and target B** with unweighted source agreement and target disagreement losses. The source coefficient is fixed at 1; `--source_strength` does not alter this method. Select the epoch/repeat maximizing $d_{T_B}(g)-d_{S_B}(g)$ on the critic-selection split.
+Train a fresh linear critic using **full source S and target B** with unweighted source agreement and target disagreement losses. The source coefficient is fixed at 1; `--source_strength` does not alter this method. Select the epoch/repeat maximizing $d_{T_B}(g)-d_S(g)$ on the critic-selection split.
 
 The final expression is
 
@@ -199,11 +199,11 @@ $$
 \widehat U_{\mathrm{residual}}
 =\widehat R_A^{\mathrm{IW}}+
 \widehat m_B\left[
-\widehat e_{S_B}+\widehat d_{T_B}(g_B)-\widehat d_{S_B}(g_B)
+\widehat e_S+\widehat d_{T_B}(g_B)-\widehat d_S(g_B)
 \right].
 $$
 
-All quantities inside brackets are **conditional means over B**. The residual source-error term remains, and the **whole bracket** is multiplied by target residual mass. A bound requires the DIS² assumptions for the conditional pair $(S_B,T_B)$; validity for the full domains does not automatically imply validity after selection.
+Source error and source disagreement are **means over the full source evaluation split**; only target disagreement is conditional on B. The **whole bracket** is multiplied by target residual mass. A bound requires the DIS² critic assumption for the pair $(S,T_B)$; validity for $(S,T)$ does not automatically imply validity for this pair. Full source means no regional filtering within each independent split, not reuse of fitting samples for evaluation.
 
 Example: IW contribution 0.06, target residual mass 0.30, and conditional residual DIS² expression 0.50 yield error estimate $0.06+0.30(0.50)=0.21$, hence raw accuracy estimate 0.79. This omits statistical uncertainty, as the implemented hybrid does.
 
@@ -212,18 +212,18 @@ Example: IW contribution 0.06, target residual mass 0.30, and conditional residu
 | Component | `iw_overlap_critic` | `iw_residual_dis2` |
 |---|---|---|
 | IW contribution | Same | Same |
-| Source samples constraining critic | A | B |
-| Source training weights | Estimated ratios, normalized within A | Uniform within B |
+| Source samples constraining critic | A | Full S |
+| Source training weights | Estimated ratios, normalized within A | Uniform over S |
 | Target critic samples | B | B |
 | Final residual expression | Target disagreement | Source error + target disagreement − source disagreement |
 | Additional assumption | Residual disagreement dominates error | Residual discrepancy dominates target–source error gap |
-| Main weakness | Constraints in A may not control behavior in B | Residual source may be sparse or absent |
+| Main weakness | Constraints in A may not control behavior in B | Full-source critic assumption may fail for target B |
 
 If both expressions used the **same** critic, their difference would be
 
 $$
 U_{\mathrm{residual}}-U_{\mathrm{overlap}}
-=m_B[e_{S_B}-d_{S_B}(g)].
+=m_B[e_S-d_S(g)].
 $$
 
 The implementations learn different critics, so this identity is an algebraic diagnostic, not a guaranteed ordering of actual results. Neither method is automatically tighter.
@@ -241,9 +241,9 @@ Source error is 10%, target error 60%, despite identical label conditionals. Ora
 
 **Replace some conservatism with labeled evidence.** When ratios are accurate and source errors transfer on A, its target error contribution can be estimated directly. The critic handles a smaller target component. This can help where full-domain disagreement is conservative or its optimization suffers from overlap competition.
 
-**Avoid relying on very large estimated IW weights.** Target-dominated regions can be assigned to the residual critic. Increasing W admits more samples to IW but may increase variance and reduce residual source counts. Decreasing W makes the result more dependent on the critic. There is no universally best W or monotone improvement guarantee.
+**Avoid relying on very large estimated IW weights.** Target-dominated regions can be assigned to the residual critic. Increasing W admits more samples to IW but may increase variance and reduce target residual counts. Decreasing W makes the result more dependent on the critic. There is no universally best W or monotone improvement guarantee.
 
-**Separate two research questions.** The overlap critic tests whether reliable-region constraints control the remaining target region. Residual DIS² tests whether a familiar discrepancy argument remains useful after removing the IW region.
+**Separate two research questions.** The overlap critic tests whether reliable-region constraints control the remaining target region. Residual DIS² tests whether a familiar discrepancy argument remains useful after removing the IW region from the target.
 
 These are hypotheses to test. Accurate mass correction can also **increase** an error estimate when source performance was optimistic. A numerically smaller error expression is not, by itself, evidence of a better method.
 
@@ -398,7 +398,8 @@ Rows identify `dataset`, `shift`, `train_method`, `bound_strategy`, `prediction_
 | `iw_error_contribution` | IW contribution from source evaluation samples in A |
 | `target_residual_mass` | Fraction of target evaluation samples in B |
 | `residual_error_contribution` | Entire residual contribution, including target mass |
-| `residual_source_error`, `residual_source_disagreement`, `residual_discrepancy` | Residual DIS² components, when evaluated |
+| `residual_source_error`, `residual_source_disagreement`, `residual_discrepancy` | Full-source error, full-source disagreement, and target-B minus full-source disagreement; legacy field names retained |
+| `residual_source_region`, `schema_version` | `full` for residual DIS²; version 2 distinguishes the updated formula from old runs |
 | `residual_target_disagreement` | Conditional target-B disagreement, when evaluated |
 | `n_source_a/b`, `n_target_a/b` | Final-evaluation regional counts |
 | `iw_effective_n` | Selected-source weight ESS: $(\sum w)^2/\sum w^2$ |
@@ -484,11 +485,11 @@ Target labels are for **post hoc benchmark evaluation only**. Do not use them to
 | Critic assumption | Surrogate optimization and source agreement do not prove residual dominance. Required assumptions differ between the hybrids. |
 | Small regional samples | Full splits can be adequate while A or B is too small. No minimum regional ESS/sample-size gate beyond nonemptiness checks. |
 | Missing source A with target A present | `unsupported_iw_source_region`; prediction is NaN. |
-| Missing evaluation source B with target B present | Residual method returns `unsupported_residual_source_region`. |
+| Missing evaluation source B with target B present | Residual method remains supported using the full source. |
 | Empty required critic training/selection region | `unsupported_critic_region`; no silent zero-error fallback. |
 | No target B in final evaluation | Expression reduces to IW and critic fitting can be skipped. This does not prove population B is empty. |
 | Empty A | Residual formula reduces to ordinary uncorrected DIS² if required B samples exist. Overlap critic cannot train without source A when target B remains. |
-| Extreme W | More IW may increase variance or starve residual source; less IW increases dependence on the critic. |
+| Extreme W | More IW may increase variance or starve target residual critic regions; less IW increases dependence on the critic. |
 | Sample-level splits | Correlation, duplicate subjects, or patient leakage undermine independence. Group-aware splitting is not implemented. |
 | Data efficiency and compute | Five-way splitting reduces evaluation size; critics are trained per threshold/method/representation. Full arrays are loaded on the chosen device despite chunked optimization. |
 | Incomplete artifacts | Configurations/splits are saved; trained models, per-sample weights/masks, dependency versions, and code/data hashes are not. |
@@ -503,7 +504,7 @@ A complete high-probability analysis must control the IW contribution and weight
 python -m pytest tests/test_iw_hybrid.py -q
 ```
 
-The suite contains 14 tests covering oracle IW mass correction (10% source versus 60% target error), denominators, residual target mass, both formulas and their same-critic difference, empty-region handling, raw out-of-range results, prior correction, reproducible disjoint splits, selected parameter snapshots, unequal-size batching, domain fitting, end-to-end files/plots, and invariance of predictions when target task labels change.
+The suite covers oracle IW mass correction (10% source versus 60% target error), denominators, residual target mass, both formulas and their same-critic difference, empty-region handling, raw out-of-range results, prior correction, reproducible disjoint splits, selected parameter snapshots, unequal-size batching, domain fitting, end-to-end files/plots, and invariance of predictions when target task labels change.
 
 These are implementation and synthetic integration checks. They do not establish real-data performance, conditional invariance, density-ratio accuracy, or coverage at a claimed confidence level.
 
@@ -511,7 +512,7 @@ Suggested evaluation sequence:
 
 1. **Oracle ratios and known regions:** isolate the decomposition from discriminator error; check true regional error recovery. Oracle-ratio experiments need a separate harness; they are not a CLI switch.
 2. **Estimated ratios with shared support:** vary mass within support under fixed conditionals; measure bias, ESS, calibration, and support rates.
-3. **Partial overlap:** vary target residual mass and source residual counts; inspect each term and diagnose critic assumptions using labels only for post hoc analysis.
+3. **Partial overlap:** vary target residual mass and source overlap counts; inspect each term and diagnose critic assumptions using labels only for post hoc analysis.
 4. **Assumption failures:** introduce conditional shift and representation compression. Report where estimates become optimistic, not only successful cases.
 5. **Matched real-data comparisons:** hybrids, matching-split reference, historical DIS², and independently verified ODD. Report coverage, conservatism, violations, MAE, support rate, runtime, and seed variation.
 6. **Ablations:** W, overlap-critic source strength, representation, sample size, optimization budget, discriminator capacity/calibration. Distinguish CLI options from extensions requiring code changes.

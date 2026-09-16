@@ -62,18 +62,20 @@ not included in this implementation.
 
 ## Method 2: iw_residual_dis2
 
-Train a fresh linear critic on source B and target B using ordinary unweighted
+Train a fresh linear critic on full source S and target B using ordinary unweighted
 DIS2 source-agreement and target-disagreement losses. Select by
-`d_target_B - d_source_B` on independent selection samples. The source strength
+`d_target_B - d_source` on independent selection samples. The source strength
 is always 1 for this method. Final empirical error expression:
 
 ```
-error_estimate_raw = R_A + m_B * (error_source_B + d_target_B - d_source_B)
+error_estimate_raw = R_A + m_B * (error_source + d_target_B - d_source)
 ```
 
 An upper-bound interpretation requires conditional invariance on A and the
-DIS2 assumptions for the conditional residual distribution pair. Those
-assumptions do not automatically transfer from the full domains.
+DIS2 critic assumption for the pair (S, T|B). This assumption does not
+automatically transfer from (S, T). Source training, selection, and evaluation
+each use their entire independent split with uniform weights, without regional
+filtering. Only the target is restricted to B.
 
 Neither method is guaranteed to be tighter than the other.
 
@@ -178,9 +180,15 @@ Additional diagnostics include IW/residual contributions, region counts,
 selected weight sum, effective sample size, weight quantiles, calibration Brier
 score, selected critic epoch/repeat/score, and numerical saturation count.
 `n_source_a/b` and `n_target_a/b` refer to final evaluation samples.
+The legacy `residual_source_error` and `residual_source_disagreement` fields now
+contain full-source evaluation means. `residual_discrepancy` is
+`d_target_B - d_source`. Rows carry `residual_source_region=full` for this method.
+Schema version 2 is saved in configuration and result rows and changes the run
+identifier, keeping these outputs separate from version-1 source-B results.
+Existing saved results are not recomputed; rerun experiments for the new formula.
 
 If target A has samples but source A has none, IW is marked unsupported.
-If residual DIS2 has target B but no evaluation source B, it is unsupported.
+Residual DIS2 remains supported when source B is empty because it uses full S.
 Empty training/selection regions are also unsupported, with NaN prediction
 and no valid/invalid classification. If final target B is empty, the plug-in
 expression reduces to IW; this observation does not prove population B is empty.

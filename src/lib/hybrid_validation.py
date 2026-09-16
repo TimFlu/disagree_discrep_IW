@@ -35,11 +35,10 @@ def aggregate(method, source_errors, weights, source_a, target_a,
            'n_source_a': int(source_a.sum()), 'n_source_b': int((~source_a).sum()),
            'n_target_a': int(target_a.sum()), 'n_target_b': int((~target_a).sum()),
            'status': 'ok', 'estimate_kind': 'plugin', 'confidence_bound_available': False,
+           'residual_source_region': 'full' if method == METHODS[1] else 'not_applicable',
            'epsilon': np.nan, **weight_diagnostics(weights, source_a)}
     if target_a.any() and not source_a.any():
         out['status'] = 'unsupported_iw_source_region'
-    if mass and method == 'iw_residual_dis2' and source_a.all():
-        out['status'] = 'unsupported_residual_source_region'
     residual = 0.
     if out['status'] == 'ok' and mass:
         if target_disagreement is None or np.asarray(target_disagreement).shape != target_a.shape:
@@ -50,8 +49,9 @@ def aggregate(method, source_errors, weights, source_a, target_a,
         if method == 'iw_residual_dis2':
             if source_disagreement is None or np.asarray(source_disagreement).shape != source_a.shape:
                 raise ValueError('Aligned source disagreements required for residual DIS2.')
-            es = float(source_errors[~source_a].mean())
-            ds = float(np.asarray(source_disagreement)[~source_a].mean())
+            # Residual DIS2 compares full S against conditional target B.
+            es = float(source_errors.mean())
+            ds = float(np.asarray(source_disagreement).mean())
             out.update(residual_source_error=es, residual_source_disagreement=ds,
                        residual_discrepancy=dt - ds)
             residual = mass * (es + dt - ds)
@@ -114,6 +114,7 @@ def evaluate_hybrids(source_features, source_logits, source_labels, target_featu
         sa, ta = select_region(sw, threshold), select_region(tw, threshold)
         for method in methods:
             common = {'prediction_method': method, 'iw_threshold': threshold, 'seed': seed,
+                      'residual_source_region': 'full' if method == METHODS[1] else 'not_applicable',
                       'n_source': len(source_features), 'n_target': len(target_features),
                       'n_val_source': len(se), 'n_val_target': len(te),
                       'h_val_acc': float(1 - errors.mean()), 'domain_log_odds_clipped_count': clipped,
@@ -121,27 +122,24 @@ def evaluate_hybrids(source_features, source_logits, source_labels, target_featu
                       **domain_stats}
             ds, dt, training_stats, status = None, None, {}, None
             if (~ta[te]).any() and not (ta[te].any() and not sa[se].any()):
-                if method == METHODS[1] and not (~sa[se]).any():
-                    status = 'unsupported_residual_source_region'
+                source_mask = sa if method == METHODS[0] else np.ones_like(sa, dtype=bool)
+                groups = []
+                for split in ('critic_train', 'critic_select'):
+                    si, ti = s[split][source_mask[s[split]]], t[split][~ta[t[split]]]
+                    common[f'n_source_{split}_region'] = len(si)
+                    common[f'n_target_{split}_region'] = len(ti)
+                    weight = sw[si] if method == METHODS[0] else np.ones(len(si))
+                    groups.extend([(source_features[si], source_logits[si], torch.as_tensor(weight, device=source_features.device)),
+                                   (target_features[ti], target_logits[ti], target_features.new_ones(len(ti)))])
+                if any(len(x) == 0 for x, _, _ in groups):
+                    status = 'unsupported_critic_region'
                 else:
-                    source_mask = sa if method == METHODS[0] else ~sa
-                    groups = []
-                    for split in ('critic_train', 'critic_select'):
-                        si, ti = s[split][source_mask[s[split]]], t[split][~ta[t[split]]]
-                        common[f'n_source_{split}_region'] = len(si)
-                        common[f'n_target_{split}_region'] = len(ti)
-                        weight = sw[si] if method == METHODS[0] else np.ones(len(si))
-                        groups.extend([(source_features[si], source_logits[si], torch.as_tensor(weight, device=source_features.device)),
-                                       (target_features[ti], target_logits[ti], target_features.new_ones(len(ti)))])
-                    if any(len(x) == 0 for x, _, _ in groups):
-                        status = 'unsupported_critic_region'
-                    else:
-                        # Identical starting RNG across thresholds/methods; regions differ.
-                        torch.manual_seed(seed + 2)
-                        critic, training_stats = train_hybrid_critic(*groups, epochs=epochs, repeats=repeats,
-                            source_strength=common['source_strength'], batch_size=batch_size, loss_type=loss_type)
-                        ds = predict_disagreement(critic, source_features[se], source_logits[se], batch_size)
-                        dt = predict_disagreement(critic, target_features[te], target_logits[te], batch_size)
+                    # Identical starting RNG across thresholds/methods; regions differ.
+                    torch.manual_seed(seed + 2)
+                    critic, training_stats = train_hybrid_critic(*groups, epochs=epochs, repeats=repeats,
+                        source_strength=common['source_strength'], batch_size=batch_size, loss_type=loss_type)
+                    ds = predict_disagreement(critic, source_features[se], source_logits[se], batch_size)
+                    dt = predict_disagreement(critic, target_features[te], target_logits[te], batch_size)
             if status:
                 row = {**common, **weight_diagnostics(sw[se], sa[se]), 'status': status,
                        'estimate_kind': 'plugin', 'confidence_bound_available': False, 'epsilon': np.nan,

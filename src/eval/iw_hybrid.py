@@ -59,7 +59,7 @@ def main(argv=None):
     device = torch.device('cuda' if args.device == 'auto' and torch.cuda.is_available()
                           else 'cpu' if args.device == 'auto' else args.device)
     config = vars(args).copy()
-    config['schema_version'] = 1
+    config['schema_version'] = 2
     run_id = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()[:12]
     destination = Path(args.results_dir)
     destination.mkdir(parents=True, exist_ok=True)
@@ -99,7 +99,7 @@ def main(argv=None):
                 source_accuracy = float((sl.argmax(1) == sy).float().mean())
                 for row in entries:
                     row.update(dataset=dataset, shift=str(shift), train_method=train_method,
-                               bound_strategy=strategy, dim=xs.shape[1], src_accuracy=source_accuracy,
+                               schema_version=config['schema_version'], bound_strategy=strategy, dim=xs.shape[1], src_accuracy=source_accuracy,
                                h_full_acc=source_accuracy, trg_accuracy=target_accuracy,
                                trg_eval_accuracy=eval_accuracy, split_file=split_name, run_id=run_id)
                     valid = row['status'] == 'ok' and np.isfinite(row['lower_bound'])

@@ -32,7 +32,7 @@ def test_full_denominator_and_residual_mass():
     b = aggregate(METHODS[1], errors, weights, sa, ta, ds, dt)
     assert a['iw_error_contribution'] == pytest.approx(.1)  # .4 / 4, not .4 / 2
     assert a['residual_error_contribution'] == pytest.approx(.5)  # .75 * (2/3)
-    assert b['error_estimate_raw'] == pytest.approx(.1 + .75 * (.5 + 2 / 3 - .5))
+    assert b['error_estimate_raw'] == pytest.approx(.1 + .75 * (.5 + 2 / 3 - .25))
 
 
 def test_same_critic_difference_identity():
@@ -40,7 +40,7 @@ def test_same_critic_difference_identity():
     sa, ta = np.array([1, 0, 0, 0], bool), np.array([1, 1, 0, 0], bool)
     a = aggregate(METHODS[0], e, np.ones(4), sa, ta, ds, dt)
     b = aggregate(METHODS[1], e, np.ones(4), sa, ta, ds, dt)
-    assert b['error_estimate_raw'] - a['error_estimate_raw'] == pytest.approx(.5 * (1 / 3 - 2 / 3))
+    assert b['error_estimate_raw'] - a['error_estimate_raw'] == pytest.approx(.5 * (.25 - .5))
 
 
 def test_no_iw_region_reduces_to_dis2_expression():
@@ -49,10 +49,13 @@ def test_no_iw_region_reduces_to_dis2_expression():
     assert row['error_estimate_raw'] == pytest.approx(.25 + 1 - .5)
 
 
-def test_missing_residual_source_is_not_zero_error():
-    row = aggregate(METHODS[1], [0, 0], [1, 1], [True, True], [False, False])
-    assert row['status'] == 'unsupported_residual_source_region'
-    assert np.isnan(row['lower_bound'])
+def test_empty_source_nonoverlap_uses_full_source():
+    row = aggregate(METHODS[1], [1, 0], [.5, .5], [True, True], [False, False],
+                    [0, 0], [1, 0])
+    assert row['status'] == 'ok'
+    assert row['residual_source_region'] == 'full'
+    assert row['residual_source_error'] == .5
+    assert row['error_estimate_raw'] == pytest.approx(.25 + .5 + .5)
 
 
 def test_missing_iw_source_is_unsupported():
@@ -123,12 +126,17 @@ def synthetic_data():
 
 def test_domain_fit_and_hybrid_integration():
     sf, sl, sy, tf, tl = synthetic_data()
-    rows, _ = evaluate_hybrids(sf, sl, sy, tf, tl, thresholds=[1., 2.],
+    rows, splits = evaluate_hybrids(sf, sl, sy, tf, tl, thresholds=[1., 2.],
                               domain_epochs=100, epochs=3, repeats=2, batch_size=100)
     assert len(rows) == 4
     assert all(r['status'] == 'ok' for r in rows)
     assert all(np.isfinite(r['lower_bound']) for r in rows)
     assert all('critic_epoch' in r for r in rows)
+    for row in rows:
+        if row['prediction_method'] == METHODS[1]:
+            for split in ('critic_train', 'critic_select'):
+                assert row[f'n_source_{split}_region'] == len(splits['source'][split])
+            assert row['residual_source_error'] == pytest.approx(1 - row['h_val_acc'])
     assert 'target_labels' not in inspect.signature(evaluate_hybrids).parameters
     ref = evaluate_dis2_reference(sf, sl, sy, tf, tl, epochs=3, repeats=2)
     assert ref['epsilon'] > 0
@@ -167,6 +175,8 @@ def test_cli_files_plot_and_target_label_isolation(tmp_path):
     first = main(shared + ['--results_dir', str(tmp_path / 'run1')])
     a = pd.read_pickle(first)
     assert len(a) == 5 and (a.status == 'ok').all()
+    assert (a.schema_version == 2).all()
+    assert (a.loc[a.prediction_method == METHODS[1], 'residual_source_region'] == 'full').all()
     assert first.with_suffix('.csv').exists()
     assert len(list(first.parent.glob('splits_*.npz'))) == 1
     labels['target'] = 1 - labels['target']
@@ -182,3 +192,37 @@ def test_cli_files_plot_and_target_label_isolation(tmp_path):
     assert (plots / 'compare_iw_hybrids_features_summary.csv').exists()
     # Loader must preserve saved results, even when historical formula columns differ.
     np.testing.assert_array_equal(load_results([first]).lower_bound, a.lower_bound)
+
+
+def test_residual_critic_keeps_full_source_when_source_b_is_empty(monkeypatch):
+    import src.lib.hybrid_validation as validation
+    sf, sl, sy, tf, tl = synthetic_data()
+
+    class FixedRatios:
+        def ratios(self, x):
+            return x.new_full((len(x),), .5 if x is sf else 2.)
+
+        def log_odds(self, x):
+            return x.new_zeros(len(x))
+
+    monkeypatch.setattr(validation, 'fit_domain', lambda *a, **k: (FixedRatios(), {}))
+    original_train = validation.train_hybrid_critic
+    captured = []
+
+    def capture(*groups, **kwargs):
+        captured.extend(groups)
+        return original_train(*groups, **kwargs)
+
+    monkeypatch.setattr(validation, 'train_hybrid_critic', capture)
+    rows, splits = evaluate_hybrids(sf, sl, sy, tf, tl, methods=[METHODS[1]],
+                                   thresholds=[1.], epochs=2, repeats=1)
+    row = rows[0]
+    assert row['status'] == 'ok'
+    assert row['n_source_b'] == 0
+    assert row['target_residual_mass'] == 1
+    for group, split in zip(captured[::2], ('critic_train', 'critic_select')):
+        x, logits, weights = group
+        torch.testing.assert_close(x, sf[splits['source'][split]])
+        torch.testing.assert_close(logits, sl[splits['source'][split]])
+        assert torch.all(weights == 1)
+    assert row['residual_source_error'] == pytest.approx(1 - row['h_val_acc'])
